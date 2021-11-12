@@ -19,12 +19,81 @@ async function run(){
                 console.log('db connection established');
                 const database = client.db('doctors_portal');
                 const appointmentsCollection = database.collection('appointments');
+                const usersCollection = database.collection('users');
 
+              // to get the appointment data from db for specific users
+
+              app.get('/appointments', async(req, res) => {
+
+                const email = req.query.email;
+                const date = req.query.date;
+                //console.log(date);
+                const query = { email: email, date: date };
+                const cursor = appointmentsCollection.find(query);
+                const appointments = await cursor.toArray();
+                res.json(appointments);
+              })
+
+                // to send appointment data to the db
                 app.post('/appointments', async(req, res) => {
-
+                    const appointment = req.body;
+                    const results = await appointmentsCollection.insertOne(appointment);
+                    
+                    res.json(results);
                   
                 })
+
+                // user data sent to the db
+
+                app.post('/users', async(req, res)=>{
+
+                  const user = req.body;
+                  const results = await usersCollection.insertOne(user);
+                  console.log(results);
+                  res.json(results);
+
+                })
+
+                // google SignIn data sent to the db
+
+                app.put('/users', async(req, res)=>{
+
+                  const user = req.body;
+                  const filter = {email: user.email};
+                  const options = {upsert: true};
+                  const updateDoc = {$set: user};
+                  const results = await usersCollection.updateOne(filter, updateDoc, options);
+                  res.json(results);
+
+                })
                
+                // make an admin give role in the users collection
+
+                app.put('/users/admin', async(req, res)=>{
+
+                  const user = req.body;
+                  const filter = {email: user.email}
+                  const updateDoc = {$set: {role: 'admin'}};
+                  const result = await usersCollection.updateOne(filter, updateDoc);
+                  res.json(result);
+                })
+
+
+                // specific user is admin or not checking for this get data from users collection
+
+                app.get('/users/:email', async(req, res)=>{
+
+                  const email = req.params.email;
+                  const query = {email: email};
+                  const user = await usersCollection.findOne(query);
+                  let isAdmin = false;
+                  if(user?.role === 'admin'){
+
+                    isAdmin = true;
+                  }
+
+                  res.json({admin: isAdmin});
+                })
                 
 
             }
